@@ -1,0 +1,111 @@
+name: nsy-g68-plus-minimal
+
+on:
+  workflow_dispatch:
+
+env:
+  REPO_URL: https://github.com/zhoufuli/immortalwrt-rk356x
+  REPO_BRANCH: main
+  CONFIG_FILE: configs/g68-plus-minimal.seed.config
+  DIY_SCRIPT: scripts/diy-minimal.sh
+  CACHE_TOOLCHAIN: true
+  UPLOAD_BIN_DIR: false
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 1024
+          temp-reserve-mb: 100
+          root-reserve-mb: 1024
+
+      - name: Checkout build repo
+        uses: actions/checkout@v4
+
+      - name: Prepare Ubuntu dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eux
+          df -hT
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android "$AGENT_TOOLSDIRECTORY" || true
+          sudo -E apt-get -y update
+          sudo -E apt-get -y install \
+            ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+            bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext \
+            gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 \
+            libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev \
+            libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz \
+            mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 \
+            python3-pip python3-ply python3-pyelftools qemu-utils rsync scons squashfs-tools \
+            subversion swig texinfo uglifyjs unzip upx-ucl wget xmlto xxd zlib1g-dev zstd
+          sudo timedatectl set-timezone "$TZ"
+
+      - name: Clone OpenWrt source
+        run: |
+          set -eux
+          mkdir -p "$GITHUB_WORKSPACE/workdir"
+          git clone --depth 1 -b "$REPO_BRANCH" "$REPO_URL" "$GITHUB_WORKSPACE/workdir/openwrt"
+          echo "OPENWRT_PATH=$GITHUB_WORKSPACE/workdir/openwrt" >> "$GITHUB_ENV"
+
+      - name: Load feeds and custom script
+        run: |
+          set -eux
+          cd "$OPENWRT_PATH"
+          chmod +x "$GITHUB_WORKSPACE/$DIY_SCRIPT"
+          "$GITHUB_WORKSPACE/$DIY_SCRIPT"
+
+      - name: Load minimal config
+        run: |
+          set -eux
+          cp "$GITHUB_WORKSPACE/$CONFIG_FILE" "$OPENWRT_PATH/.config"
+          cd "$OPENWRT_PATH"
+          make defconfig
+          grep -q '^CONFIG_TARGET_rockchip_armv8_DEVICE_nsy_g68-plus=y$' .config
+          grep -q '^CONFIG_TARGET_PROFILE="DEVICE_nsy_g68-plus"$' .config
+          if grep -E '^(CONFIG_PACKAGE_(netdata|ttyd|luci-app-ttyd|docker|dockerd|docker-compose|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|luci-app-autoreboot|luci-app-passwall2|luci-app-openclash|xray-core|v2ray-geoip|v2ray-geosite|sing-box)=y)$' .config; then
+            echo "Unexpected bundled package found in minimal config" >&2
+            exit 1
+          fi
+          grep -E '^(CONFIG_TARGET_|CONFIG_PACKAGE_(luci-base|dnsmasq-full|firewall4|kmod-mt_wifi|u-boot-nsy-g68-plus-rk3568|trusted-firmware-a-rk3568))' .config | sort
+
+      - name: Cache toolchain
+        if: env.CACHE_TOOLCHAIN == 'true'
+        uses: HiGarfield/cachewrtbuild@main
+        with:
+          ccache: false
+          mixkey: rk356x-nsy-g68-plus-minimal
+          prefix: ${{ env.OPENWRT_PATH }}
+
+      - name: Download packages
+        run: |
+          set -eux
+          cd "$OPENWRT_PATH"
+          make download -j"$(nproc)"
+          find dl -size -1024c -print -delete
+
+      - name: Compile firmware
+        run: |
+          set -eux
+          cd "$OPENWRT_PATH"
+          make -j"$(nproc)" || make -j1 V=s
+          echo "FIRMWARE_DATE=$(date +%Y.%m.%d-%H.%M)" >> "$GITHUB_ENV"
+
+      - name: Organize firmware
+        run: |
+          set -eux
+          cd "$OPENWRT_PATH/bin/targets/rockchip/armv8"
+          cp "$OPENWRT_PATH/.config" build.config
+          cat sha256sums
+          echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nsy-g68-plus-minimal-${{ env.FIRMWARE_DATE }}
+          path: ${{ env.FIRMWARE_PATH }}
