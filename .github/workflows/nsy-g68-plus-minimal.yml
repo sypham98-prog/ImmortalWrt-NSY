@@ -85,8 +85,8 @@ jobs:
           make defconfig
           grep -q '^CONFIG_TARGET_rockchip_armv8_DEVICE_nsy_g68-plus=y$' .config
           grep -q '^CONFIG_TARGET_PROFILE="DEVICE_nsy_g68-plus"$' .config
-          if grep -E '^(CONFIG_PACKAGE_(netdata|ttyd|luci-app-ttyd|docker|dockerd|docker-compose|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|luci-app-autoreboot|luci-app-passwall2|luci-app-openclash|xray-core|v2ray-geoip|v2ray-geosite|sing-box|wifi-scripts)=y|CONFIG_DEFAULT_(default-settings-chn|luci-app-package-manager|luci-app-cpufreq|wifi-scripts)=y)$' .config; then
-            echo "Unexpected bundled/default package found in minimal config" >&2
+          if grep -E '^(CONFIG_PACKAGE_(netdata|ttyd|luci-app-ttyd|docker|dockerd|docker-compose|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|luci-app-autoreboot|luci-app-passwall2|luci-app-openclash|xray-core|v2ray-geoip|v2ray-geosite|sing-box|wifi-scripts|kmod-mt7916-firmware|kmod-cfg80211|kmod-mac80211)=y)$' .config; then
+            echo "Unexpected bundled package found in minimal config" >&2
             exit 1
           fi
           grep -E '^(CONFIG_TARGET_|CONFIG_PACKAGE_(luci-base|dnsmasq-full|firewall4|kmod-mt_wifi|u-boot-nsy-g68-plus-rk3568|trusted-firmware-a-rk3568))' .config | sort
@@ -134,7 +134,7 @@ jobs:
           for pkg in base-files busybox procd netifd firewall4 dnsmasq-full dropbear uhttpd luci-base kmod-mt_wifi wifi-dats wifi-profile kmod-switch-rtl8367b wpad-openssl; do
             grep -q "^$pkg -" "$manifest"
           done
-          if grep -E '^(luci-app-passwall2|luci-app-openclash|docker|dockerd|docker-compose|netdata|ttyd|luci-app-ttyd|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|sing-box|xray-core|v2ray-geoip|v2ray-geosite|wifi-scripts|luci-app-package-manager|default-settings-chn|luci-i18n-.*-zh-cn) -' "$manifest"; then
+          if grep -E '^(luci-app-passwall2|luci-app-openclash|docker|dockerd|docker-compose|netdata|ttyd|luci-app-ttyd|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|sing-box|xray-core|v2ray-geoip|v2ray-geosite|wifi-scripts|kmod-mt7916-firmware|kmod-cfg80211|kmod-mac80211|luci-app-package-manager|default-settings-chn|luci-i18n-.*-zh-cn) -' "$manifest"; then
             echo "Unexpected bundled package found in firmware manifest" >&2
             exit 1
           fi
