@@ -110,7 +110,7 @@ jobs:
         run: |
           set -eux
           cd "$OPENWRT_PATH"
-          make -j"$(nproc)" || make -j1 V=s
+          make -j"$(nproc)" || make -j1 || make -j1 V=s
           echo "FIRMWARE_DATE=$(date +%Y.%m.%d-%H.%M)" >> "$GITHUB_ENV"
 
       - name: Organize firmware
@@ -126,4 +126,5 @@ jobs:
         with:
           name: nsy-g68-plus-minimal-${{ env.FIRMWARE_DATE }}
           path: ${{ env.FIRMWARE_PATH }}
+
 
