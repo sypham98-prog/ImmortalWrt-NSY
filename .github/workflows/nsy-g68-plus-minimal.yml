@@ -60,6 +60,23 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/$DIY_SCRIPT"
           "$GITHUB_WORKSPACE/$DIY_SCRIPT"
 
+      - name: Verify NSY G68 Plus port mapping
+        run: |
+          set -eux
+          cd "$OPENWRT_PATH"
+          network_file="target/linux/rockchip/armv8/base-files/etc/board.d/02_network"
+          image_file="target/linux/rockchip/image/armv8.mk"
+          dts_file="target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/rk3568-nsy-g68-plus.dts"
+          test -f "$network_file"
+          test -f "$image_file"
+          test -f "$dts_file"
+          awk '/nsy,g68-plus/,/;;/' "$network_file" | tee /tmp/nsy-g68-network.txt
+          grep -q 'ucidef_set_interfaces_lan_wan "eth0" "eth1"' /tmp/nsy-g68-network.txt
+          grep -q '"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "6u@eth0" "7u@eth1"' /tmp/nsy-g68-network.txt
+          grep -q 'DEVICE_DTS := rockchip/rk3568-nsy-g68-plus' "$image_file"
+          grep -q 'UBOOT_DEVICE_NAME := nsy-g68-plus-rk3568' "$image_file"
+          grep -q 'compatible = "nsy,g68-plus", "rockchip,rk3568";' "$dts_file"
+
       - name: Load minimal config
         run: |
           set -eux
@@ -109,3 +126,4 @@ jobs:
         with:
           name: nsy-g68-plus-minimal-${{ env.FIRMWARE_DATE }}
           path: ${{ env.FIRMWARE_PATH }}
+
