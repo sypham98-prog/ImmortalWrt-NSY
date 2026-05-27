@@ -131,7 +131,7 @@ jobs:
           grep -q '^CONFIG_TARGET_PROFILE="DEVICE_nsy_g68-plus"$' build.config
           manifest="$(find . -maxdepth 1 -name '*nsy_g68-plus*.manifest' -print -quit)"
           test -n "$manifest"
-          for pkg in base-files busybox procd netifd firewall4 dnsmasq-full dropbear uhttpd luci-base kmod-mt_wifi wifi-dats wifi-profile kmod-switch-rtl8367b wpad-openssl; do
+          for pkg in base-files busybox procd netifd firewall4 dnsmasq-full dropbear uhttpd luci-base luci-app-mtk kmod-mt_wifi wifi-dats wifi-profile kmod-switch-rtl8367b wpad-openssl; do
             grep -q "^$pkg -" "$manifest"
           done
           if grep -E '^(luci-app-passwall2|luci-app-openclash|docker|dockerd|docker-compose|netdata|ttyd|luci-app-ttyd|luci-app-diskman|smartd|smartmontools|mdadm|wsdd2|sing-box|xray-core|v2ray-geoip|v2ray-geosite|wifi-scripts|kmod-mt7916-firmware|kmod-cfg80211|kmod-mac80211|luci-app-package-manager|default-settings-chn|luci-i18n-.*-zh-cn) -' "$manifest"; then
